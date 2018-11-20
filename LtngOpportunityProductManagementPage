@@ -1,0 +1,158 @@
+<aura:component controller="LtngOpportunityProductManagementPage" implements="force:appHostable,flexipage:availableForAllPageTypes,force:LightningQuickAction,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global">
+    <aura:attribute name="typeOptions" type="List" access="PRIVATE"/>
+    
+    <aura:attribute name="oppyProductOptions" type="Map" access="PRIVATE"/>
+    <aura:attribute name="quoteOptions" type="Map" access="PRIVATE"/>
+    
+    
+    <aura:attribute name="fileColumns" type="list" />
+    <aura:attribute name="fileData" type="list" />
+    <aura:attribute name="recordId" type="String" access="global"/>
+    <aura:attribute name="opportunity" type="Object"/>
+    <aura:attribute name="oppyProducts" type="Object" />
+    <aura:attribute name="delOppProductsIds" type="list" />
+    <aura:attribute name="hideConfirm" type="Boolean" default="true"/>
+    <aura:attribute name="hideSubmitConfirm" type="Boolean" default="true"/>
+    <aura:attribute name="hideRepeatConfirm" type="Boolean" default="true"/>
+    <aura:attribute name="hideDetailPage" type="Boolean" default="true"/>
+    <aura:attribute name="hideRecallConfirm" type="Boolean" default="true"/>
+    <aura:attribute name="currentDelItem" type="String" />
+    <aura:attribute name="currentRepeatItem" type="String" />
+    <aura:attribute name="currentLostReportItem" type="String" />
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="recordCreated" event="c:LtngCPQRecordCreatedEvt" action="{!c.handleRecordCreatedEvent}"/>
+    
+    <aura:attribute name="isCommunity" type="Boolean" default="false"/>
+    <aura:attribute name="allSelected" type="Boolean" default="false"/>
+    <aura:attribute name="hideBackButton" type="Boolean" default="true"/>
+    <aura:attribute name="templateUrl" type="String" />
+    
+    <aura:attribute name="multiPreview" type="Boolean" default="false"/>
+    <aura:attribute name="documentIds" type="list" />
+    <aura:attribute name="approveColumns" type="list" />
+    <aura:attribute name="approveData" type="Object" />
+    
+    <aura:attribute name="isDisabledSubmit" type="Boolean" default="false"/>
+    
+    <aura:attribute name="masterQuotes" type="list" default="[]"/>
+    <aura:attribute name="printType" type="String" />
+    <aura:attribute name="disabledWin" type="Boolean" default="false"/>
+    
+    <aura:handler name="onCheckQuote" event="c:LtngOpportunityProductCheckQuoteEvt" action="{!c.handleCheckQuoteCheckbox}"/>
+    
+    <c:LtngCPQEventButtonCmp aura:id="back-button" hidden="{!v.hideBackButton}" onClick="{!c.handleShowHomepage}"/>
+    
+    <lightning:spinner aura:id="spinner" class="slds-hide" variant="brand" size="large"/>
+    
+    <c:LtngCPQAlertCmp aura:id="alert"/>
+    
+    <div style="width:94vw;margin:5px auto;">
+        <div aura:id="opp-list-container">
+            <div>
+                <p class="pTitle" style="color: #C23934;font-size: 24px; font-weight: bolder;">{!$Label.c.gOppyProduct}</p>
+                <lightning:button variant="destructive" label="{!$Label.c.gNew}" class="buttons"
+                                  onclick="{!c.newMaterialDetail}" />
+                <!-- <lightning:button variant="destructive" label="拷贝行项" class="buttons"
+                                  onclick="{!c.cloneOppyProducts}" /> -->
+             	<lightning:button variant="destructive" label="{!$Label.c.gCloneOppy}" class="{!v.isCommunity ? 'slds-hide':'buttons'}"
+                                  onclick="{!c.cloneOpportunity}" />
+                <lightning:button variant="destructive" label="{!$Label.c.gSplitOpportunity}" class="{!v.isCommunity ? 'slds-hide':'buttons'}"
+                                  onclick="{!c.splitOpportunity}" /> 
+                <lightning:button variant="destructive" label="{!$Label.c.gGeneratePrint}" class="{!v.isCommunity ? 'slds-hide':'buttons'}"
+                                  onclick="{!c.generatePrint}" />
+                <lightning:button variant="destructive" label="{!$Label.c.gPrintOEMcontract}" class="{!v.isCommunity ? 'slds-hide':'buttons'}"
+                                  onclick="{!c.printOEMContract}" />                
+                <lightning:button variant="destructive" label="{!$Label.c.gPrintContract}" class="{!v.isCommunity ? 'slds-hide':'buttons'}"
+                                  onclick="{!c.printContract}" />
+                <lightning:button variant="destructive" label="{!$Label.c.gSubmitForApproval}" class="{!v.isCommunity ? 'slds-hide':'buttons'}"
+                                  onclick="{!c.submitForApproval}" disabled="{!v.isDisabledSubmit}"/>
+                <lightning:button variant="destructive" label="{!v.isCommunity ? $Label.c.gConfirmQuote:$Label.c.gWinOrder}" class="buttons"
+								  onclick="{!c.sendQuotationToSAP}" disabled="{!v.disabledWin}"/>
+				<lightning:button variant="destructive" label="{!$Label.c.gBackToOpportunity}" class="buttons slds-float_right"
+								  onclick="{!c.backToOpportunity}" />
+                <!-- add recall button _dariochen 2018.8.12 -->
+                <lightning:button variant="destructive" label="{!$Label.c.gRecallBtn}" class="buttons"
+                                  onclick="{!c.recallApproval}" />
+            </div>
+            <br />
+            <div>
+                <table class="slds-table slds-table--bordered" style="width:94vw;margin:0 auto;margin-bottom: 3rem;">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="color:#C23934">
+                                <!-- <lightning:input type="checkbox" label="" name="itemSelected" checked="{!v.allSelected}" onchange="{!c.selectAll}"/> -->
+                            </th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gModel}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gType}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gQuantity}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gCreatedDate}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gSalesperson}</span></th>
+                            <!-- <th scope="col" style="color:#C23934"><span class="slds-truncate">预计发货日期</span></th> -->
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gEstimatedOrderDate}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gSalesStage}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gSAPProductNum}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gCurrentApprover}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gStatus}</span></th>
+                            <th scope="col" style="color:#C23934"><span class="slds-truncate">{!$Label.c.gOperation}</span></th>
+                            <!-- <th scope="col" style="color:#C23934"><span class="slds-truncate">操作</span></th> -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.oppyProducts}" var="op">
+                            <c:LtngOpportunityProductItemCmp opportunityProduct="{!op}" onChangeCheckbox="{!c.handleChangeCheckbox}" onEdit="{!c.handleEditItemEvent}" onDelete="{!c.handleDeleteItemEvt}" onLostReport="{!c.handleOpenLostReportEvt}" onRepeat="{!c.handleRepeatItemEvt}"/>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div aura:id="file-previewer" class="slds-hide">
+                <c:LtngTemplateViZartContainerCmp title="{!$Label.c.gQuotationPreview}" quotes="{!v.masterQuotes}" printType ="{!v.printType}" closeDialog="{!c.closeFilePreviewer}"/>
+            </div>
+            
+            <div class="demo-only slds-hide" aura:id="conflictInlinePopUp">
+                <section class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <h2 class="slds-text-heading_medium slds-hyphenate"></h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium">
+                            <lightning:select name="mySelect" label="{!$Label.c.gSelectType}" onchange="{!c.onTypeChange}" aura:id="mySelect">
+                                <option value="----" text="----"/>
+                                <aura:iteration items="{!v.typeOptions}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}" selected="{!option.selected}"/>
+                                </aura:iteration>
+                            </lightning:select>
+                            
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <button class="slds-button slds-button_brand" onclick="{!c.saveConflictHandler}">{!$Label.c.gCancel}</button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </div>
+        </div>
+        <div class="{!if(v.hideConfirm, 'slds-hide', '')}">
+            <c:LtngCPQConfirmCmp confirmDescription="{!$Label.c.gCancelConfirm}" onConfirm="{! c.handleConfirm}"/>
+        </div>
+        <div class="{!if(v.hideSubmitConfirm, 'slds-hide', '')}">
+            <c:LtngCPQSubmitConfirmCmp aura:id="Submit-Confirm" opportunity="{!v.opportunity}" columns="{!v.fileColumns}" externalData="{!v.fileData}" onConfirm="{! c.handleSubmitConfirm}"/>
+        </div>
+        <div class="{!if(v.hideRepeatConfirm, 'slds-hide', '')}">
+            <c:LtngCPQConfirmCmp confirmDescription="{!$Label.c.gRepeatConfirm}" onConfirm="{! c.handleRepeatConfirm}"/>
+        </div>
+        <div class="{!if(v.hideRecallConfirm, 'slds-hide', '')}">
+            <c:LtngCPQRecallConfirmCmp isconfirm="{! c.handleRecallConfirm}"/>
+        </div>
+
+        <div class="{!if(v.hideDetailPage,'record-detail-dialog slds-hide', 'record-detail-dialog')}" style="height: 640px;">
+            <c:LtngCPQLostBillDialogCmp hideDetailPage="{!v.hideDetailPage}" oppyProductId="{!v.currentLostReportItem}" onSave="{!c.handleSaveLostReportEvt}"/>
+        </div>
+        
+        <div aura:id="product-detail-container" class="slds-hide" style="margin:5px auto;width: 94vw;color: #535353;">
+            
+        </div>
+    </div>
+    
+</aura:component>
